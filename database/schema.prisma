@@ -1,0 +1,138 @@
+// schema.prisma
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql" // You can change this to your preferred database provider (e.g., mysql, sqlite, etc.)
+    url      = env("DATABASE_URL")
+}
+
+model User {
+    id             Int        @id @default(autoincrement())
+    clerkId        String     @unique
+    name           String
+    username       String     @unique
+    email          String     @unique
+    password       String? // Optional
+    bio            String?
+    picture        String
+    location       String?
+    portfolio      String?
+    reputation     Int        @default(0)
+    savedQuestions Question[] @relation("UserSavedQuestions")
+
+    createdAt    DateTime       @default(now())
+    updatedAt    DateTime       @updatedAt
+    Question     Question?      @relation(fields: [questionId], references: [id])
+    questionId   Int?
+    Question     Question?      @relation(fields: [questionId], references: [id])
+    questionId   Int?
+    Question     Question[]
+    Answer       Answer?        @relation(fields: [answerId], references: [id])
+    answerId     Int?
+    Answer       Answer?        @relation(fields: [answerId], references: [id])
+    answerId     Int?
+    Answer       Answer[]
+    Interaction  Interaction[]
+    Tag          Tag?           @relation(fields: [tagId], references: [id])
+    tagId        Int?
+    TagFollowers TagFollowers[]
+}
+
+model Question {
+    id        Int      @id @default(autoincrement())
+    title     String
+    content   String
+    tags      Tag[]    @relation("QuestionTags")
+    views     Int      @default(0)
+    upvotes   User[]   @relation("QuestionUpvotes")
+    downvotes User[]   @relation("QuestionDownvotes")
+    author    User     @relation(fields: [authorId], references: [id])
+    authorId  Int
+    answers   Answer[] @relation("QuestionAnswers")
+
+    createdAt    DateTime       @default(now())
+    updatedAt    DateTime       @updatedAt
+    User         User?          @relation(fields: [userId], references: [id])
+    userId       Int?
+    Answer       Answer[]
+    Interaction  Interaction[]
+    QuestionTags QuestionTags[]
+}
+
+model Answer {
+    id         Int      @id @default(autoincrement())
+    content    String
+    upvotes    User[]   @relation("AnswerUpvotes")
+    downvotes  User[]   @relation("AnswerDownvotes")
+    author     User     @relation(fields: [authorId], references: [id])
+    authorId   Int
+    question   Question @relation(fields: [questionId], references: [id])
+    questionId Int
+
+    createdAt   DateTime      @default(now())
+    updatedAt   DateTime      @updatedAt
+    Question    Question      @relation(fields: [questionId], references: [id])
+    Interaction Interaction[]
+}
+
+model Interaction {
+    id         Int       @id @default(autoincrement())
+    user       User      @relation(fields: [userId], references: [id])
+    userId     Int
+    action     String
+    question   Question? @relation(fields: [questionId], references: [id])
+    questionId Int?
+    answer     Answer?   @relation(fields: [answerId], references: [id])
+    answerId   Int?
+    tags       Tag[]     @relation("InteractionTags")
+
+    createdAt       DateTime          @default(now())
+    updatedAt       DateTime          @updatedAt
+    InteractionTags InteractionTags[]
+}
+
+model Tag {
+    id          Int        @id @default(autoincrement())
+    name        String     @unique
+    description String
+    questions   Question[] @relation("QuestionTags")
+    followers   User[]     @relation("TagFollowers")
+
+    createdAt       DateTime          @default(now())
+    updatedAt       DateTime          @updatedAt
+    Interaction     Interaction?      @relation(fields: [interactionId], references: [id])
+    interactionId   Int?
+    TagFollowers    TagFollowers[]
+    QuestionTags    QuestionTags[]
+    InteractionTags InteractionTags[]
+}
+
+model TagFollowers {
+    userId Int
+    tagId  Int
+    user   User @relation(fields: [userId], references: [id])
+    tag    Tag  @relation(fields: [tagId], references: [id])
+
+    @@id([userId, tagId])
+}
+
+model QuestionTags {
+    questionId Int
+    tagId      Int
+    question   Question @relation(fields: [questionId], references: [id])
+    tag        Tag      @relation(fields: [tagId], references: [id])
+
+    @@id([questionId, tagId])
+}
+
+model InteractionTags {
+    interactionId Int
+    tagId         Int
+    interaction   Interaction @relation(fields: [interactionId], references: [id])
+    tag           Tag         @relation(fields: [tagId], references: [id])
+
+    @@id([interactionId, tagId])
+}

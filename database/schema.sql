@@ -1,35 +1,103 @@
--- Active: 1731131296284@@127.0.0.1@1433@master
--- create database uniproj
+-- delete a database forcefully
+-- USE master;
+-- ALTER DATABASE [Project] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+-- DROP DATABASE [Project];
 
-SELECT HAS_PERMS_BY_NAME(null, null, 'CREATE ANY DATABASE') AS CanCreateDatabase;
+
+USE master
+GO
+
+IF NOT EXISTS (
+    SELECT name
+FROM sys.databases
+WHERE name = N'Project'
+)
+CREATE DATABASE Project
+GO
 
 
-CREATE TABLE Users
+USE Project
+GO
+
+IF NOT EXISTS (
+    SELECT name
+FROM sys.tables
+WHERE name = N'USERS'
+)
+CREATE TABLE USERS
 (
-    UserId INT PRIMARY KEY IDENTITY(1, 1),-- Auto-incrementing ID
+    UserID INT PRIMARY KEY IDENTITY(1, 1),
     FirstName VARCHAR(50),
     LastName VARCHAR(50),
     UserName VARCHAR(50) NOT NULL UNIQUE,
-    Email VARCHAR(100) NOT NULL UNIQUE,
-    UserPin VARCHAR(15) NOT NULL,
-    sessionToken VARCHAR(50),
-);
+    Email VARCHAR(50) NOT NULL UNIQUE,
+    UserPassword VARCHAR(50) NOT NULL,
+    Bio VARCHAR(300) ,
+    createdAt datetime NOT NULL,
+    updatedAt datetime NOT NULL
+)
+GO
 
--- ALTER TABLE Users
--- ALTER COLUMN sessionToken VARCHAR(50);
+IF NOT EXISTS (
+    SELECT name
+FROM sys.tables
+WHERE name = N'QUESTIONS'
+)
+CREATE TABLE QUESTIONS
+(
+    QuesID INT PRIMARY KEY IDENTITY(1, 1),
+    Title VARCHAR(100),
+    Content TEXT,
+    createdAt datetime NOT NULL,
+    updatedAt datetime NOT NULL,
+    UserID INT,
+    FOREIGN KEY(UserID) REFERENCES USERS(UserID)
+)
+GO
 
-CREATE NONCLUSTERED INDEX idx_sessionToken
-ON Users (sessionToken);
+IF NOT EXISTS (
+    SELECT name
+FROM sys.tables
+WHERE name = N'ANSWERS'
+)
+CREATE TABLE ANSWERS
+(
+    AnsID INT PRIMARY KEY IDENTITY(1, 1),
+    content TEXT,
+    upvotes INT DEFAULT 0,
+    downvotes INT DEFAULT 0,
+    UserID INT,
+    Foreign Key (UserID) REFERENCES USERS(UserID),
+    QuesID INT,
+    Foreign Key (QuesID) REFERENCES QUESTIONS(QuesID)
+)
+GO
 
--- Insert some users with valid session tokens
-INSERT INTO Users
-    (FirstName, LastName, Email, UserPin, sessionToken)
-VALUES
-    ('Alice', 'Johnson', 'alice.johnson@example.com', '12345', 'token1'),
-    ('Bob', 'Smith', 'bob.smith@example.com', '67890', 'token2'),
-    ('Charlie', 'Brown', 'charlie.brown@example.com', 'abcde', 'token3'),
-    ('David', 'Williams', 'david.williams@example.com', '54321', NULL),
-    ('Eve', 'Davis', 'eve.davis@example.com', '09876', NULL);
+IF NOT EXISTS (
+    SELECT name
+FROM sys.tables
+WHERE name = N'QTAG'
+)
+CREATE TABLE QTAG
+(
+    QTagID INT PRIMARY KEY IDENTITY(1, 1),
+    name VARCHAR(50) UNIQUE NOT NULL
+)
+GO
 
-select *
-from Users
+
+IF NOT EXISTS (
+    SELECT name
+FROM sys.tables
+WHERE name = N'Question_QTAG'
+)
+CREATE TABLE Question_QTAG
+(
+    QuesID INT,
+    QTagID INT,
+    PRIMARY KEY (QuesID, QTagID),
+    Foreign Key (QuesID) REFERENCES QUESTIONS(QuesID),
+    Foreign Key (QTagID) REFERENCES QTAG(QTagID)
+)
+GO
+
