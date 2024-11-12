@@ -128,7 +128,7 @@ def signin():
     try:
         user = db.session.execute(
             text(
-                "SELECT Email, UserPin, sessionToken FROM Users WHERE Email = :email",
+                "SELECT Email, UserPassword, SessionToken FROM USERS WHERE Email = :email",
             ),
             {"email": email},
         ).fetchone()
@@ -144,7 +144,7 @@ def signin():
             # if user.sessionToken is None:
             db.session.execute(
                 text(
-                    "UPDATE Users SET sessionToken=:sessionToken WHERE email = :email",
+                    "UPDATE USERS SET SessionToken=:sessionToken WHERE email = :email",
                 ),
                 {"sessionToken": generate_uuid_key(), "email": email},
             )
@@ -152,7 +152,7 @@ def signin():
 
         user = db.session.execute(
             text(
-                "SELECT FirstName, LastName, Email, sessionToken FROM Users WHERE Email = :email",
+                "SELECT FirstName, LastName, Email, SessionToken FROM USERS WHERE Email = :email",
             ),
             {"email": email},
         ).fetchone()
