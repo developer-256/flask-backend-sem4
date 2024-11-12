@@ -6,11 +6,12 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import text
 import uuid
 from functools import wraps
+import datetime
 
 app = Flask(__name__)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = (
-    "mssql+pyodbc://SA:YourStrong!Passw0rd@localhost/master?driver=ODBC+Driver+17+for+SQL+Server"
+    "mssql+pyodbc://SA:YourStrong!Passw0rd@localhost/Project?driver=ODBC+Driver+17+for+SQL+Server"
 )
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
@@ -40,10 +41,11 @@ def hello_world():
 def register():
     fname = request.form.get("fname")  # Use form data for POST requests
     lname = request.form.get("lname")
+    uname = request.form.get("uname")
     email = request.form.get("email")
     password = request.form.get("password")
 
-    if not all([fname, lname, email, password]):
+    if not all([fname, lname, email, uname, password]):
         return (
             jsonify(
                 {
@@ -51,6 +53,7 @@ def register():
                     "data": {
                         "fname": fname,
                         "lname": lname,
+                        "uname": uname,
                         "email": email,
                         "password": password,
                     },
@@ -58,25 +61,42 @@ def register():
             ),
             400,
         )
-
     try:
+        # check if email is unique
         user = db.session.execute(
-            text("Select email FROM Users WHERE email = :email"), {"email": email}
+            text("Select Email FROM USERS WHERE Email = :email"), {"email": email}
         ).fetchone()
-
         if user is not None:
             return jsonify({"error": "User already registered. Sign in Instead"}), 400
 
+        # check if email is unique
+        username = db.session.execute(
+            text("Select * FROM USERS WHERE UserName = :uname"), {"uname": uname}
+        ).fetchone()
+
+        if username is not None:
+            return jsonify({"error": "Username already taken"}), 400
+
+        now = datetime.datetime.now()
+        print("date1: ", now)
         db.session.execute(
             text(
-                "INSERT INTO Users (FirstName, LastName, Email, UserPin, sessionToken) VALUES (:fname, :lname, :email, :password, NULL)",
+                "INSERT INTO USERS (FirstName, LastName, UserName, Email, UserPassword, createdAt, updatedAt) VALUES (:FirstName, :LastName, :UserName, :Email, :UserPassword, :createdAt, :updatedAt)",
             ),
-            {"fname": fname, "lname": lname, "email": email, "password": password},
+            {
+                "FirstName": fname,
+                "LastName": lname,
+                "UserName": uname,
+                "Email": email,
+                "UserPassword": password,
+                "createdAt": now,
+                "updatedAt": now,
+            },
         )
         db.session.commit()
         new_user = db.session.execute(
             text(
-                "SELECT FirstName, LastName, Email FROM Users WHERE Email = :email",
+                "SELECT FirstName, LastName, Email FROM USERS WHERE Email = :email",
             ),
             {"email": email},
         ).fetchone()

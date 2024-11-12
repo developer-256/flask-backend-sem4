@@ -1,4 +1,5 @@
--- delete a database forcefully
+-- delete  database forcefully
+
 -- USE master;
 -- ALTER DATABASE [Project] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
 -- DROP DATABASE [Project];
@@ -32,7 +33,8 @@ CREATE TABLE USERS
     UserName VARCHAR(50) NOT NULL UNIQUE,
     Email VARCHAR(50) NOT NULL UNIQUE,
     UserPassword VARCHAR(50) NOT NULL,
-    Bio VARCHAR(300) ,
+    Bio VARCHAR(300),
+    SessionToken VARCHAR(50),
     createdAt datetime NOT NULL,
     updatedAt datetime NOT NULL
 )
@@ -101,3 +103,6 @@ CREATE TABLE Question_QTAG
 )
 GO
 
+select *
+from USERS
+WHERE UserName = 'usman'
