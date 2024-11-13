@@ -37,6 +37,30 @@ def hello_world():
     return {"Project Name": "University Database and Python Project"}
 
 
+@app.route("/test")
+def test():
+    try:
+        test = db.session.execute(
+            text("SELECT * FROM QUESTIONS Where UserID = 1")
+        ).fetchall()
+
+        columns = [
+            "QuesID",
+            "Title",
+            "Content",
+            "createdAt",
+            "updatedAt",
+            "UserID",
+        ]
+
+        table = AddKeysToTable(columns, test)
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+    return jsonify(table)
+
+
 @app.route("/register", methods=["POST"])
 def register():
     fname = request.form.get("fname")  # Use form data for POST requests
@@ -189,26 +213,44 @@ def token_required(f):
     return decorated
 
 
-@app.route("/users")
+@app.route("/askquestion", methods=["POST"])
 @token_required
-def get_users():
-
+def askquestion():
+    title = request.form.get("title")
+    content = request.form.get("content")
     token = request.headers.get("Authorization").split(" ")[1]
-    print("3.", token)
 
     try:
-        table = db.session.execute(text("SELECT * FROM Users")).fetchall()
-        columns = [
-            "UserID",
-            "FirstName",
-            "LastName",
-            "Email",
-            "UserPin",
-            "Session_Token",
-        ]
-        tableWithKeys = AddKeysToTable(columns, table)
+        userID = db.session.execute(
+            text("SELECT UserID FROM USERS WHERE SessionToken = :token"),
+            {"token": token},
+        ).fetchone()
 
-        return jsonify(tableWithKeys)
+        date = datetime.datetime.now()
+        db.session.execute(
+            text(
+                "INSERT INTO QUESTIONS(Title, Content, UserID, createdAt, updatedAt) VALUES (:title, :content, :userID, :createdAt, :updatedAt)"
+            ),
+            {
+                "title": title,
+                "content": content,
+                "userID": userID[0],
+                "createdAt": date,
+                "updatedAt": date,
+            },
+        )
+
+        question = db.session.execute(
+            text("SELECT QuesID, Title, Content FROM QUESTIONS WHERE UserID = :userID"),
+            {"userID": userID[0]},
+        ).fetchone()
+        db.session.commit()
+
+        columns = ["QuesID", "Title", "Content"]
+        response = dict(zip(columns, question))
+
+        print(response)
+        return jsonify(response)
     except Exception as e:
         return jsonify({"error": str(e)})
 
