@@ -213,7 +213,7 @@ def token_required(f):
     return decorated
 
 
-@app.route("/askquestion", methods=["POST"])
+@app.route("/postquestion", methods=["POST"])
 @token_required
 def askquestion():
     title = request.form.get("title")
@@ -239,20 +239,44 @@ def askquestion():
                 "updatedAt": date,
             },
         )
-
-        question = db.session.execute(
-            text("SELECT QuesID, Title, Content FROM QUESTIONS WHERE UserID = :userID"),
-            {"userID": userID[0]},
-        ).fetchone()
         db.session.commit()
 
-        columns = ["QuesID", "Title", "Content"]
-        response = dict(zip(columns, question))
+        table = db.session.execute(
+            text(
+                "SELECT QuesID, Title, Content, createdAt FROM QUESTIONS WHERE UserID = :userID ORDER BY createdAt DESC"
+            ),
+            {"userID": userID[0]},
+        ).fetchall()
 
-        print(response)
-        return jsonify(response)
+        columns = ["QuesID", "Title", "Content", "createdAt"]
+        response = [dict(zip(columns, rows)) for rows in table]
+
+        print(response[0])
+        return jsonify(response[0])
     except Exception as e:
         return jsonify({"error": str(e)})
+
+
+@app.route("/getquestions")
+def getQuestion():
+    # query = request.args.get("query")
+    sort = request.args.get("sort")
+
+    dbQuery = "SELECT * FROM QUESTIONS"
+
+    if sort == "desc":
+        dbQuery = "SELECT * FROM QUESTIONS ORDER BY createdAt DESC"
+
+    table = db.session.execute(text(dbQuery)).fetchall()
+    columns = [
+        "QuesID",
+        "Title",
+        "Content",
+        "createdAt",
+        "UserID",
+    ]
+    response = [dict(zip(columns, rows)) for rows in table]
+    return jsonify(response)
 
 
 if __name__ == "__main__":
