@@ -215,7 +215,7 @@ def token_required(f):
 
 @app.route("/postquestion", methods=["POST"])
 @token_required
-def askquestion():
+def postquestion():
     title = request.form.get("title")
     content = request.form.get("content")
     token = request.headers.get("Authorization").split(" ")[1]
@@ -262,21 +262,140 @@ def getQuestion():
     # query = request.args.get("query")
     sort = request.args.get("sort")
 
-    dbQuery = "SELECT * FROM QUESTIONS"
+    try:
+        dbQuery = "SELECT * FROM QUESTIONS"
 
-    if sort == "desc":
-        dbQuery = "SELECT * FROM QUESTIONS ORDER BY createdAt DESC"
+        if sort == "desc":
+            dbQuery = "SELECT * FROM QUESTIONS ORDER BY createdAt DESC"
 
-    table = db.session.execute(text(dbQuery)).fetchall()
-    columns = [
-        "QuesID",
-        "Title",
-        "Content",
-        "createdAt",
-        "UserID",
-    ]
-    response = [dict(zip(columns, rows)) for rows in table]
-    return jsonify(response)
+        table = db.session.execute(text(dbQuery)).fetchall()
+        columns = [
+            "QuesID",
+            "Title",
+            "Content",
+            "createdAt",
+            "UserID",
+        ]
+        response = [dict(zip(columns, rows)) for rows in table]
+        return jsonify(response)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/get-user-questions")
+@token_required
+def getUserQuestions():
+    token = request.headers.get("Authorization").split(" ")[1]
+
+    try:
+        UserID = db.session.execute(
+            text("SELECT UserID FROM USERS WHERE SessionToken = :token"),
+            {"token": token},
+        ).fetchone()
+
+        table = db.session.execute(
+            text("SELECT * FROM QUESTIONS WHERE UserID = :UserID"),
+            {"UserID": UserID[0]},
+        ).fetchall()
+
+        columns = [
+            "QuesID",
+            "Title",
+            "Content",
+            "createdAt",
+            "updatedAt",
+            "UserID",
+        ]
+        response = [dict(zip(columns, rows)) for rows in table]
+
+        return jsonify(response)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/get-question-by-id")
+def getQuesByID():
+    QuesID = request.args.get("QuesID")
+
+    try:
+        question = db.session.execute(
+            text("SELECT * FROM QUESTIONS WHERE QuesID = :QuesID"), {"QuesID": QuesID}
+        ).fetchone()
+
+        columns = [
+            "QuesID",
+            "Title",
+            "Content",
+            "createdAt",
+            "updatedAt",
+            "UserID",
+        ]
+
+        response = dict(zip(columns, question))
+
+        return jsonify(response)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/editquestion", methods=["POST"])
+@token_required
+def editQuestion():
+    QuesID = request.args.get("QuesID")
+    token = request.headers.get("Authorization").split(" ")[1]
+    title = request.form.get("title")
+    content = request.form.get("content")
+
+    try:
+        user = db.session.execute(
+            text("SELECT UserID FROM USERS WHERE SessionToken = :token"),
+            {"token": token},
+        ).fetchone()
+
+        isUserQuestion = db.session.execute(
+            text(
+                "SELECT QuesID FROM QUESTIONS WHERE UserID = :user AND QuesID = :QuesID"
+            ),
+            {"user": user[0], "QuesID": QuesID},
+        ).fetchone()
+
+        if isUserQuestion is None:
+            return jsonify({"error": "Question not Found"}), 404
+
+        updatedAt = datetime.datetime.now()
+        db.session.execute(
+            text(
+                "UPDATE QUESTIONS SET title = :title, content = :content, updatedAt = :updatedAt WHERE QuesID = :QuesID"
+            ),
+            {
+                "title": title,
+                "content": content,
+                "updatedAt": updatedAt,
+                "QuesID": QuesID,
+            },
+        )
+        db.session.commit()
+
+        question = db.session.execute(
+            text("SELECT * FROM QUESTIONS WHERE QuesID = :QuesID"),
+            {"QuesID": QuesID},
+        ).fetchone()
+
+        columns = [
+            "QuesID",
+            "Title",
+            "Content",
+            "createdAt",
+            "updatedAt",
+            "UserID",
+        ]
+        response = dict(zip(columns, question))
+        return jsonify(response)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":
