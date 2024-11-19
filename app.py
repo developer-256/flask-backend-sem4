@@ -324,6 +324,9 @@ def getQuesByID():
             text("SELECT * FROM QUESTIONS WHERE QuesID = :QuesID"), {"QuesID": QuesID}
         ).fetchone()
 
+        if question is None:
+            return jsonify({"error": "Question not found"}), 404
+
         columns = [
             "QuesID",
             "Title",
@@ -396,6 +399,46 @@ def editQuestion():
         return jsonify(response)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/delete-question", methods=["POST"])
+@token_required
+def deleteQuestion():
+    QuesID = request.args.get("QuesID")
+    token = request.headers.get("Authorization").split(" ")[1]
+
+    try:
+        UserID = db.session.execute(
+            text("SELECT UserID FROM USERS WHERE SessionToken = :token"),
+            {"token": token},
+        ).fetchone()
+
+        isUserQues = db.session.execute(
+            text(
+                "SELECT QuesID, UserID, Title, Content FROM QUESTIONS WHERE QuesID = :QuesID AND UserID = :UserID"
+            ),
+            {"QuesID": QuesID, "UserID": UserID[0]},
+        ).fetchone()
+
+        if isUserQues is None:
+            return (
+                jsonify({"error": "Question not found or doesn't belong to you"}),
+                404,
+            )
+
+        db.session.execute(
+            text("DELETE FROM QUESTIONS WHERE QuesID = :QuesID AND UserID = :UserID"),
+            {"QuesID": QuesID, "UserID": UserID[0]},
+        )
+        db.session.commit()
+
+        columns = ["QuesID", "UserID", "Title", "Content"]
+        response = dict(zip(columns, isUserQues))
+
+        return jsonify(response)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 
 if __name__ == "__main__":
