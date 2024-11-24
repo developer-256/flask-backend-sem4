@@ -403,8 +403,8 @@ def getQuesByID():
 def editQuestion():
     QuesID = request.args.get("QuesID")
     token = request.headers.get("Authorization").split(" ")[1]
-    title = request.form.get("title")
-    content = request.form.get("content")
+    title = request.json.get("title")
+    content = request.json.get("content")
 
     try:
         user = db.session.execute(
@@ -420,7 +420,10 @@ def editQuestion():
         ).fetchone()
 
         if isUserQuestion is None:
-            return jsonify({"error": "Question not Found"}), 404
+            return (
+                jsonify({"error": "Question does not belong to you"}),
+                404,
+            )
 
         updatedAt = datetime.datetime.now()
         db.session.execute(
@@ -549,6 +552,35 @@ def createAnswer():
 
     except Exception as e:
         db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/get-user")
+@token_required
+def getUser():
+    token = request.headers.get("Authorization").split(" ")[1]
+    try:
+        User = db.session.execute(
+            text(
+                "SELECT UserID, FirstName, LastName, UserName, Email, Bio, createdAt FROM USERS WHERE SessionToken = :token"
+            ),
+            {"token": token},
+        ).fetchone()
+
+        columns = [
+            "UserID",
+            "FirstName",
+            "LastName",
+            "UserName",
+            "Email",
+            "Bio",
+            "createdAt",
+        ]
+
+        response = dict(zip(columns, User))
+
+        return jsonify(response)
+    except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 

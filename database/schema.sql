@@ -58,8 +58,6 @@ CREATE TABLE QUESTIONS
 )
 GO
 
-SELECT *
-FROM "QUESTIONS";
 
 IF NOT EXISTS (
     SELECT name
@@ -117,12 +115,13 @@ SELECT
     QUESTIONS.Content,
     QUESTIONS.updatedAt,
     STUFF((
-        SELECT ', ' + QTAG.Tag
+    SELECT ', ' + QTAG.Tag
     FROM QTAG
         INNER JOIN Question_QTAG ON Question_QTAG.QTagID = QTAG.QTagID
     WHERE Question_QTAG.QuesID = QUESTIONS.QuesID
     FOR XML PATH('')
-    ), 1, 1, '') AS Tags
+), 1, 1, '') AS Tags
 FROM
-    QUESTIONS INNER JOIN USERS ON QUESTIONS.UserID = USERS.UserID
+    QUESTIONS
+    INNER JOIN USERS ON QUESTIONS.UserID = USERS.UserID
 ORDER BY QUESTIONS.updatedAt;
