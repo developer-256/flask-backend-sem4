@@ -32,6 +32,7 @@
    - upvotes (no time for tables)
    - downvotes (no time for tables)
    - one to many with questions
+   - one to many with user
 
 4. # Question tag
 

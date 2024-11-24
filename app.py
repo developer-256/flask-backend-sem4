@@ -7,8 +7,11 @@ from sqlalchemy import text
 import uuid
 from functools import wraps
 import datetime
+from flask_cors import CORS
+
 
 app = Flask(__name__)
+CORS(app)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = (
     "mssql+pyodbc://SA:YourStrong!Passw0rd@localhost/Project?driver=ODBC+Driver+17+for+SQL+Server"
@@ -192,10 +195,12 @@ def signin():
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        token = request.headers.get("Authorization").split(" ")[1]
-
+        token = request.headers.get("Authorization")
         if not token:
-            return jsonify({"error": "Token is missing!"}), 401
+            return jsonify({"error": "Session token is missing!"}), 401
+
+        token = token.split(" ")[1]
+        # print(f"001: Session Token: -{token}")
 
         try:
             user = db.session.execute(
@@ -216,8 +221,9 @@ def token_required(f):
 @app.route("/postquestion", methods=["POST"])
 @token_required
 def postquestion():
-    title = request.form.get("title")
-    content = request.form.get("content")
+    title = request.json.get("title")
+    content = request.json.get("content")
+    tags = request.json.get("tags")
     token = request.headers.get("Authorization").split(" ")[1]
 
     try:
@@ -241,18 +247,50 @@ def postquestion():
         )
         db.session.commit()
 
-        table = db.session.execute(
+        # Get the QuesID of the newly inserted question using SCOPE_IDENTITY()
+        QuesID = db.session.execute(
+            text("SELECT TOP 1 QuesID FROM QUESTIONS ORDER BY QuesID DESC")
+        ).fetchone()
+        if tags:
+            for tag in tags:
+                existing_tag = db.session.execute(
+                    text("SELECT QTagID FROM QTAG WHERE Tag = :tag"),
+                    {"tag": tag},
+                ).fetchone()
+
+                if not existing_tag:
+                    db.session.execute(
+                        text("INSERT INTO QTAG (Tag) VALUES (:tag)"),
+                        {"tag": tag},
+                    )
+                    db.session.commit()
+                    qtagID = db.session.execute(
+                        text("SELECT TOP 1 QTagID FROM QTAG ORDER BY QTagID DESC")
+                    ).fetchone()
+                else:
+                    qtagID = existing_tag
+
+                # Insert into the Question_QTAG table to link the question and the tag
+                db.session.execute(
+                    text(
+                        "INSERT INTO Question_QTAG (QuesID, QTagID) VALUES (:quesID, :qtagID)"
+                    ),
+                    {"quesID": QuesID[0], "qtagID": qtagID[0]},
+                )
+                db.session.commit()
+
+        question = db.session.execute(
             text(
-                "SELECT QuesID, Title, Content, createdAt FROM QUESTIONS WHERE UserID = :userID ORDER BY createdAt DESC"
+                "SELECT TOP 1 QuesID, Title, Content, createdAt FROM QUESTIONS WHERE UserID = :userID ORDER BY createdAt DESC"
             ),
             {"userID": userID[0]},
-        ).fetchall()
+        ).fetchone()
 
         columns = ["QuesID", "Title", "Content", "createdAt"]
-        response = [dict(zip(columns, rows)) for rows in table]
+        response = dict(zip(columns, question))
 
-        print(response[0])
-        return jsonify(response[0])
+        # print(response)
+        return jsonify(response)
     except Exception as e:
         return jsonify({"error": str(e)})
 
@@ -263,24 +301,40 @@ def getQuestion():
     sort = request.args.get("sort")
 
     try:
-        dbQuery = "SELECT * FROM QUESTIONS"
+        dbQuery = "SELECT QUESTIONS.QuesID, QUESTIONS.UserID, USERS.UserName, QUESTIONS.Title, QUESTIONS.Content, QUESTIONS.likes, QUESTIONS.updatedAt, STUFF(( SELECT ', ' + QTAG.Tag FROM QTAG INNER JOIN Question_QTAG ON Question_QTAG.QTagID = QTAG.QTagID WHERE Question_QTAG.QuesID = QUESTIONS.QuesID FOR XML PATH('') ), 1, 1, '') AS Tags FROM QUESTIONS INNER JOIN USERS ON QUESTIONS.UserID = USERS.UserID ORDER BY QUESTIONS.updatedAt DESC;"
 
         if sort == "desc":
-            dbQuery = "SELECT * FROM QUESTIONS ORDER BY createdAt DESC"
+            dbQuery = "SELECT QUESTIONS.QuesID, QUESTIONS.UserID, USERS.UserName, QUESTIONS.Title, QUESTIONS.Content, QUESTIONS.likes, QUESTIONS.updatedAt, STUFF(( SELECT ', ' + QTAG.Tag FROM QTAG INNER JOIN Question_QTAG ON Question_QTAG.QTagID = QTAG.QTagID WHERE Question_QTAG.QuesID = QUESTIONS.QuesID FOR XML PATH('') ), 1, 1, '') AS Tags FROM QUESTIONS INNER JOIN USERS ON QUESTIONS.UserID = USERS.UserID ORDER BY QUESTIONS.updatedAt;"
 
         table = db.session.execute(text(dbQuery)).fetchall()
         columns = [
             "QuesID",
+            "UserID",
+            "UserName",
             "Title",
             "Content",
-            "createdAt",
-            "UserID",
+            "likes",
+            "updatedAt",
+            "Tags",
         ]
         response = [dict(zip(columns, rows)) for rows in table]
         return jsonify(response)
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+# @app.route("/like-question")
+# @token_required
+# def likeQuestion():
+#     QuesID = request.args.get("QuesID")
+#     QuesID = int(QuesID)
+#     # token = request.headers.get("Authorization").split(" ")[1]
+#     try:
+#         db.session.execute(text("UPDATE QUESTIONS SET likes"))
+#         return {"kfjl": "lkjasdf"}
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
 
 
 @app.route("/get-user-questions")
@@ -439,6 +493,63 @@ def deleteQuestion():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+
+
+@app.route("/create-answer", methods=["POST"])
+@token_required
+def createAnswer():
+    QuesID = request.form.get("QuesID")
+    Content = request.form.get("Content")
+    token = request.headers.get("Authorization").split(" ")[1]
+
+    try:
+        User = db.session.execute(
+            text("SELECT UserID FROM USERS WHERE SessionToken = :token"),
+            {"token": token},
+        ).fetchone()
+
+        QuesExist = db.session.execute(
+            text("SELECT QuesID FROM QUESTIONS WHERE QuesID = :QuesID"),
+            {"QuesID": QuesID},
+        ).fetchone()
+
+        if QuesExist is None:
+            return jsonify({"error": "Question does not exist"}), 404
+
+        db.session.execute(
+            text(
+                "INSERT INTO ANSWERS(content, upvotes, downvotes, UserID, QuesID) VALUES (:content, :upvotes, :downvotes, :userID, :QuesID)"
+            ),
+            {
+                "content": Content,
+                "upvotes": 0,
+                "downvotes": 0,
+                "userID": User[0],
+                "QuesID": QuesID,
+            },
+        )
+        db.session.commit()
+
+        print(
+            f"Inserting Answer: UserID = {User[0]}, QuesID = {QuesID}, Content = {Content}"
+        )
+
+        Answer = db.session.execute(
+            text(
+                "SELECT TOP 1 * FROM ANSWERS WHERE UserID = :UserID AND QuesID = :QuesID ORDER BY AnsID DESC"
+            ),
+            {"UserID": User[0], "QuesID": QuesID},
+        ).fetchone()
+
+        columns = ["AnsID", "Content", "UserID", "QuesID"]
+
+        Response = dict(zip(columns, Answer))
+
+        return jsonify(Response)
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":

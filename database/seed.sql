@@ -1,82 +1,64 @@
 USE Project
 GO
 
+-- Seed the USERS table
 INSERT INTO USERS
-    (FirstName, LastName, UserName, Email, UserPassword, Bio, createdAt, updatedAt)
+    (FirstName, LastName, UserName, Email, UserPassword, Bio, SessionToken, createdAt, updatedAt)
 VALUES
-    ('John', 'Doe', 'johndoe', 'johndoe@example.com', 'password123', 'Software Engineer', GETDATE(), GETDATE()),
-    ('Jane', 'Smith', 'janesmith', 'janesmith@example.com', 'securepass456', 'Data Scientist', GETDATE(), GETDATE()),
-    ('Alice', 'Brown', 'alicebrown', 'alicebrown@example.com', 'mypassword789', 'Product Manager', GETDATE(), GETDATE()),
-    ('Bob', 'Williams', 'bobw', 'bobw@example.com', 'bobpass', 'Full-Stack Developer', GETDATE(), GETDATE()),
-    ('Charlie', 'Davis', 'charlied', 'charlied@example.com', 'charlie123', 'Front-End Developer', GETDATE(), GETDATE()),
-    ('Eva', 'Wilson', 'evaw', 'evaw@example.com', 'evapass', 'UX Designer', GETDATE(), GETDATE()),
-    ('Frank', 'Miller', 'frankm', 'frankm@example.com', 'frankpass', 'DevOps Engineer', GETDATE(), GETDATE()),
-    ('Grace', 'Taylor', 'gracet', 'gracet@example.com', 'grace123', 'Database Admin', GETDATE(), GETDATE()),
-    ('Hank', 'Anderson', 'hanka', 'hanka@example.com', 'hankpass', 'Back-End Developer', GETDATE(), GETDATE()),
-    ('Isabel', 'Thomas', 'isabelt', 'isabelt@example.com', 'isabel123', 'QA Engineer', GETDATE(), GETDATE());
+    ('John', 'Doe', 'john.doe', 'john.doe@example.com', 'password123', 'Software Developer', 'token123', GETDATE(), GETDATE()),
+    ('Jane', 'Smith', 'jane.smith', 'jane.smith@example.com', 'password456', 'Product Manager', 'token456', GETDATE(), GETDATE()),
+    ('Alice', 'Johnson', 'alice.johnson', 'alice.johnson@example.com', 'password789', 'UX Designer', 'token789', GETDATE(), GETDATE()),
+    ('Bob', 'Brown', 'bob.brown', 'bob.brown@example.com', 'password101', 'Data Scientist', 'token101', GETDATE(), GETDATE());
 
+-- Seed the QUESTIONS table
 INSERT INTO QUESTIONS
     (Title, Content, createdAt, updatedAt, UserID)
 VALUES
-    ('How to learn SQL?', 'I am looking for resources to learn SQL. Any suggestions?', GETDATE(), GETDATE(), 1),
-    ('Best practices for database normalization?', 'Should I always normalize my database?', GETDATE(), GETDATE(), 2),
-    ('What is the best way to secure a web app?', 'How do you handle security in web development?', GETDATE(), GETDATE(), 3),
-    ('Tips for optimizing SQL queries?', 'Any tips on improving SQL query performance?', GETDATE(), GETDATE(), 4),
-    ('How to set up DevOps for small teams?', 'What are essential tools and processes?', GETDATE(), GETDATE(), 5),
-    ('How to use CSS Grid?', 'I am struggling to understand CSS Grid layout.', GETDATE(), GETDATE(), 6),
-    ('Differences between SQL and NoSQL?', 'Which database is better for scalability?', GETDATE(), GETDATE(), 7),
-    ('Best data types for large text?', 'Need help choosing the right data type.', GETDATE(), GETDATE(), 8),
-    ('When to use indexes in SQL?', 'Do indexes always improve performance?', GETDATE(), GETDATE(), 9),
-    ('What is a JOIN in SQL?', 'Can someone explain JOIN types?', GETDATE(), GETDATE(), 10);
+    ('What is SQL?', 'Can someone explain what SQL is and how it is used?', GETDATE(), GETDATE(), 1),
+    ('How to optimize a database query?', 'I am facing performance issues with some queries, any suggestions?', GETDATE(), GETDATE(), 2),
+    ('What is the difference between an inner join and a left join?', 'Can anyone explain the difference between inner and left joins?', GETDATE(), GETDATE(), 3),
+    ('How to handle NULL values in SQL?', 'I am confused about handling NULL values in SQL, can someone help?', GETDATE(), GETDATE(), 4);
 
+-- Seed the ANSWERS table
 INSERT INTO ANSWERS
-    (Content, upvotes, downvotes, UserID, QuesID)
+    (content, upvotes, downvotes, createdAt, updatedAt, UserID, QuesID)
 VALUES
-    ('Try using JOINs instead of subqueries.', 5, 0, 1, 1),
-    ('Normalizing helps avoid redundancy.', 10, 1, 2, 2),
-    ('Always sanitize user input to avoid SQL injection.', 8, 1, 3, 3),
-    ('Use indexes to speed up queries.', 7, 0, 4, 4),
-    ('Use Docker and Jenkins for CI/CD.', 12, 2, 5, 5),
-    ('Learn CSS Grid by practice.', 3, 1, 6, 6),
-    ('SQL is good for structured data.', 6, 0, 7, 7),
-    ('Use TEXT type for large text data.', 4, 0, 8, 8),
-    ('Indexes improve read speed, not write.', 9, 1, 9, 9),
-    ('JOINs combine tables based on relationships.', 11, 1, 10, 10);
+    ('SQL stands for Structured Query Language. It is used to communicate with databases.', 5, 0, GETDATE(), GETDATE(), 1, 1),
+    ('To optimize a query, try to reduce the number of joins and indexes. Use proper indexes and avoid SELECT *.', 7, 1, GETDATE(), GETDATE(), 2, 2),
+    ('An inner join returns only the rows where there is a match in both tables. A left join returns all rows from the left table, and matching rows from the right table, or NULL if no match is found.', 10, 0, GETDATE(), GETDATE(), 3, 3),
+    ('Use IS NULL to check for NULL values in SQL. You can also use COALESCE or IFNULL to replace NULL with a default value.', 3, 0, GETDATE(), GETDATE(), 4, 4);
 
+-- Seed the QTAG table
 INSERT INTO QTAG
-    (Name)
+    (Tag)
 VALUES
     ('SQL'),
-    ('Security'),
+    ('Database'),
     ('Optimization'),
-    ('Web Development'),
-    ('DevOps'),
-    ('CSS'),
-    ('NoSQL'),
-    ('Database Design'),
-    ('Performance'),
-    ('JOINs');
+    ('Joins'),
+    ('NULL');
 
+-- Seed the Question_QTAG table (Many-to-Many relationship between QUESTIONS and QTAG)
 INSERT INTO Question_QTAG
     (QuesID, QTagID)
 VALUES
-    -- 'How to learn SQL?' tagged with 'SQL'
     (1, 1),
-    -- 'Best practices for database normalization?' tagged with 'Database Design'
-    (2, 8),
-    -- 'What is the best way to secure a web app?' tagged with 'Security'
+    (2, 3),
+    (3, 4),
+    (4, 5),
+    (1, 2),
+    (2, 1),
     (3, 2),
-    -- 'Tips for optimizing SQL queries?' tagged with 'Optimization'
-    (4, 3),
-    -- 'How to set up DevOps for small teams?' tagged with 'DevOps'
-    (5, 5),
-    -- 'How to use CSS Grid?' tagged with 'CSS'
-    (6, 6),
-    -- 'Differences between SQL and NoSQL?' tagged with 'NoSQL'
-    (7, 7),
-    -- 'Best data types for large text?' tagged with 'Database Design'
-    (8, 8),
-    -- 'When to use indexes in SQL?' tagged with 'Performance'
-    (9, 9),
-    -- 'What is a JOIN in SQL?' tagged with 'JOINs'
-    (10, 10);
+    (4, 1);
+
+-- Query to verify the inserted data
+SELECT *
+FROM USERS;
+SELECT *
+FROM QUESTIONS;
+SELECT *
+FROM ANSWERS;
+SELECT *
+FROM QTAG;
+SELECT *
+FROM Question_QTAG;

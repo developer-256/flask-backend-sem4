@@ -52,10 +52,14 @@ CREATE TABLE QUESTIONS
     Content TEXT,
     createdAt datetime NOT NULL,
     updatedAt datetime NOT NULL,
+    likes INT DEFAULT '0',
     UserID INT,
     FOREIGN KEY(UserID) REFERENCES USERS(UserID)
 )
 GO
+
+SELECT *
+FROM "QUESTIONS";
 
 IF NOT EXISTS (
     SELECT name
@@ -68,6 +72,8 @@ CREATE TABLE ANSWERS
     content TEXT,
     upvotes INT DEFAULT 0,
     downvotes INT DEFAULT 0,
+    createdAt datetime NOT NULL,
+    updatedAt datetime NOT NULL,
     UserID INT,
     Foreign Key (UserID) REFERENCES USERS(UserID),
     QuesID INT,
@@ -83,7 +89,7 @@ WHERE name = N'QTAG'
 CREATE TABLE QTAG
 (
     QTagID INT PRIMARY KEY IDENTITY(1, 1),
-    name VARCHAR(50) UNIQUE NOT NULL
+    Tag VARCHAR(50) UNIQUE NOT NULL
 )
 GO
 
@@ -103,6 +109,20 @@ CREATE TABLE Question_QTAG
 )
 GO
 
-select *
-from USERS
-WHERE UserName = 'usman'
+SELECT
+    QUESTIONS.QuesID,
+    QUESTIONS.UserID,
+    USERS.UserName,
+    QUESTIONS.Title,
+    QUESTIONS.Content,
+    QUESTIONS.updatedAt,
+    STUFF((
+        SELECT ', ' + QTAG.Tag
+    FROM QTAG
+        INNER JOIN Question_QTAG ON Question_QTAG.QTagID = QTAG.QTagID
+    WHERE Question_QTAG.QuesID = QUESTIONS.QuesID
+    FOR XML PATH('')
+    ), 1, 1, '') AS Tags
+FROM
+    QUESTIONS INNER JOIN USERS ON QUESTIONS.UserID = USERS.UserID
+ORDER BY QUESTIONS.updatedAt;
