@@ -1,3 +1,4 @@
+-- Active: 1731131296284@@127.0.0.1@1433@Project
 -- delete  database forcefully
 
 -- USE master;
@@ -125,3 +126,49 @@ FROM
     QUESTIONS
     INNER JOIN USERS ON QUESTIONS.UserID = USERS.UserID
 ORDER BY QUESTIONS.updatedAt;
+
+SELECT
+    QUESTIONS.QuesID,
+    QUESTIONS.UserID,
+    USERS.UserName,
+    QUESTIONS.Title,
+    QUESTIONS.Content,
+    QUESTIONS.updatedAt
+FROM
+    QUESTIONS
+    INNER JOIN USERS ON QUESTIONS.UserID = USERS.UserID
+ORDER BY QUESTIONS.updatedAt;
+
+SELECT *
+FROM QTAG
+
+
+SELECT
+    QUESTIONS.QuesID,
+    QUESTIONS.Title,
+    QUESTIONS.createdAt
+FROM
+    QUESTIONS
+    INNER JOIN Question_QTAG ON Question_QTAG.QuesID = QUESTIONS.QuesID
+    INNER JOIN QTAG ON QTAG.QTagID = Question_QTAG.QTagID
+WHERE 
+    QTAG.QTagID = 1;
+
+
+
+
+SELECT
+    QTAG.QTagID,
+    QTAG.Tag,
+    COUNT(QUESTIONS.QuesID) AS TotalQuestions
+FROM
+    QTAG
+    LEFT JOIN
+    Question_QTAG ON QTAG.QTagID = Question_QTAG.QTagID
+    LEFT JOIN
+    QUESTIONS ON Question_QTAG.QuesID = QUESTIONS.QuesID
+GROUP BY 
+    QTAG.QTagID, QTAG.Tag
+ORDER BY 
+    TotalQuestions DESC;
+

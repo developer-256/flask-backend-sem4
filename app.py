@@ -96,7 +96,7 @@ def register():
         if user is not None:
             return jsonify({"error": "User already registered. Sign in Instead"}), 400
 
-        # check if email is unique
+        # chnow = datetime.datetime.now()eck if email is unique
         username = db.session.execute(
             text("Select * FROM USERS WHERE UserName = :uname"), {"uname": uname}
         ).fetchone()
@@ -104,7 +104,6 @@ def register():
         if username is not None:
             return jsonify({"error": "Username already taken"}), 400
 
-        now = datetime.datetime.now()
         print("date1: ", now)
         db.session.execute(
             text(
@@ -324,19 +323,6 @@ def getQuestion():
         return jsonify({"error": str(e)}), 500
 
 
-# @app.route("/like-question")
-# @token_required
-# def likeQuestion():
-#     QuesID = request.args.get("QuesID")
-#     QuesID = int(QuesID)
-#     # token = request.headers.get("Authorization").split(" ")[1]
-#     try:
-#         db.session.execute(text("UPDATE QUESTIONS SET likes"))
-#         return {"kfjl": "lkjasdf"}
-#     except Exception as e:
-#         return jsonify({"error": str(e)}), 500
-
-
 @app.route("/get-user-questions")
 @token_required
 def getUserQuestions():
@@ -498,63 +484,6 @@ def deleteQuestion():
         return jsonify({"error": str(e)}), 400
 
 
-@app.route("/create-answer", methods=["POST"])
-@token_required
-def createAnswer():
-    QuesID = request.form.get("QuesID")
-    Content = request.form.get("Content")
-    token = request.headers.get("Authorization").split(" ")[1]
-
-    try:
-        User = db.session.execute(
-            text("SELECT UserID FROM USERS WHERE SessionToken = :token"),
-            {"token": token},
-        ).fetchone()
-
-        QuesExist = db.session.execute(
-            text("SELECT QuesID FROM QUESTIONS WHERE QuesID = :QuesID"),
-            {"QuesID": QuesID},
-        ).fetchone()
-
-        if QuesExist is None:
-            return jsonify({"error": "Question does not exist"}), 404
-
-        db.session.execute(
-            text(
-                "INSERT INTO ANSWERS(content, upvotes, downvotes, UserID, QuesID) VALUES (:content, :upvotes, :downvotes, :userID, :QuesID)"
-            ),
-            {
-                "content": Content,
-                "upvotes": 0,
-                "downvotes": 0,
-                "userID": User[0],
-                "QuesID": QuesID,
-            },
-        )
-        db.session.commit()
-
-        print(
-            f"Inserting Answer: UserID = {User[0]}, QuesID = {QuesID}, Content = {Content}"
-        )
-
-        Answer = db.session.execute(
-            text(
-                "SELECT TOP 1 * FROM ANSWERS WHERE UserID = :UserID AND QuesID = :QuesID ORDER BY AnsID DESC"
-            ),
-            {"UserID": User[0], "QuesID": QuesID},
-        ).fetchone()
-
-        columns = ["AnsID", "Content", "UserID", "QuesID"]
-
-        Response = dict(zip(columns, Answer))
-
-        return jsonify(Response)
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 500
-
-
 @app.route("/get-user")
 @token_required
 def getUser():
@@ -581,6 +510,216 @@ def getUser():
 
         return jsonify(response)
     except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/get-tags")
+def getTags():
+    try:
+        Tags = db.session.execute(
+            text(
+                "SELECT QTAG.QTagID, QTAG.Tag, COUNT(QUESTIONS.QuesID) AS TotalQuestions FROM QTAG LEFT JOIN Question_QTAG ON QTAG.QTagID = Question_QTAG.QTagID LEFT JOIN QUESTIONS ON Question_QTAG.QuesID = QUESTIONS.QuesID GROUP BY  QTAG.QTagID, QTAG.Tag ORDER BY  TotalQuestions DESC;"
+            ),
+        ).fetchall()
+
+        columns = [
+            "QTagID",
+            "Tag",
+            "TotalQuestions",
+        ]
+
+        response = [dict(zip(columns, row)) for row in Tags]
+
+        return jsonify(response)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/get-ques-from-tag")
+def getQuesFromTags():
+    tagID = request.args.get("QTagID")
+
+    if tagID is None:
+        return jsonify({"error": "Please provide QTagID"}), 404
+
+    try:
+        Tags = db.session.execute(
+            text(
+                "SELECT QUESTIONS.QuesID, QUESTIONS.Title, QUESTIONS.createdAt FROM QUESTIONS INNER JOIN Question_QTAG ON Question_QTAG.QuesID = QUESTIONS.QuesID INNER JOIN QTAG ON QTAG.QTagID = Question_QTAG.QTagID WHERE  QTAG.QTagID = :tagID"
+            ),
+            {"tagID": tagID},
+        ).fetchall()
+
+        columns = [
+            "QuesID",
+            "Title",
+            "createdAt",
+        ]
+
+        response = [dict(zip(columns, row)) for row in Tags]
+
+        return jsonify(response)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/get-all-users")
+def getAllUsers():
+    try:
+        Users = db.session.execute(
+            text(
+                "SELECT UserID, FirstName, LastName, UserName, Email, createdAt FROM USERS"
+            ),
+        ).fetchall()
+
+        columns = ["UserID", "FirstName", "LastName", "UserName", "Email", "createdAt"]
+
+        response = [dict(zip(columns, row)) for row in Users]
+
+        return jsonify(response)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/create-answer", methods=["POST"])
+@token_required
+def createAnswer():
+    QuesID = request.args.get("QuesID")
+    Content = request.form.get("Content")
+    token = request.headers.get("Authorization").split(" ")[1]
+
+    try:
+        User = db.session.execute(
+            text("SELECT UserID FROM USERS WHERE SessionToken = :token"),
+            {"token": token},
+        ).fetchone()
+
+        QuesExist = db.session.execute(
+            text("SELECT QuesID FROM QUESTIONS WHERE QuesID = :QuesID"),
+            {"QuesID": QuesID},
+        ).fetchone()
+
+        if QuesExist is None:
+            return jsonify({"error": "Question does not exist"}), 404
+
+        now = datetime.datetime.now()
+        db.session.execute(
+            text(
+                "INSERT INTO ANSWERS(content, UserID, QuesID, createdAt, updatedAt) VALUES (:content, :userID, :QuesID, :createdAt, :updatedAt)"
+            ),
+            {
+                "content": Content,
+                "userID": User[0],
+                "QuesID": QuesID,
+                "createdAt": now,
+                "updatedAt": now,
+            },
+        )
+        db.session.commit()
+
+        Answer = db.session.execute(
+            text(
+                "SELECT TOP 1 AnsID, content, upvotes, downvotes, createdAt, UserID, QuesID FROM ANSWERS WHERE UserID = :UserID AND QuesID = :QuesID ORDER BY AnsID DESC"
+            ),
+            {"UserID": User[0], "QuesID": QuesID},
+        ).fetchone()
+
+        columns = [
+            "AnsID",
+            "content",
+            "upvotes",
+            "downvotes",
+            "createdAt",
+            "UserID",
+            "QuesID",
+        ]
+
+        Response = dict(zip(columns, Answer))
+
+        return jsonify(Response)
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/get-ans-of-ques")
+def getAnsOfQues():
+    QuesID = request.args.get("QuesID")
+    sort = request.args.get("sort")
+
+    if QuesID is None:
+        return jsonify({"error": "QuesID is not provided"}), 404
+    try:
+        query = "SELECT AnsID, content, upvotes, downvotes, createdAt, UserID, QuesID FROM ANSWERS WHERE QuesID = :QuesID ORDER BY createdAt DESC"
+
+        if sort == "oldest":
+            query = "SELECT AnsID, content, upvotes, downvotes, createdAt, UserID, QuesID FROM ANSWERS WHERE QuesID = :QuesID ORDER BY createdAt"
+
+        if sort == "upvotes":
+            query = "SELECT AnsID, content, upvotes, downvotes, createdAt, UserID, QuesID FROM ANSWERS WHERE QuesID = :QuesID ORDER BY upvotes, createdAt DESC"
+
+        if sort == "downvotes":
+            query = "SELECT AnsID, content, upvotes, downvotes, createdAt, UserID, QuesID FROM ANSWERS WHERE QuesID = :QuesID ORDER BY downvotes, createdAt DESC"
+
+        Answer = db.session.execute(
+            text(query),
+            {"QuesID": QuesID},
+        ).fetchall()
+
+        columns = [
+            "AnsID",
+            "content",
+            "upvotes",
+            "downvotes",
+            "createdAt",
+            "UserID",
+            "QuesID",
+        ]
+
+        Response = [dict(zip(columns, row)) for row in Answer]
+
+        return jsonify(Response)
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/get-ans-of-user")
+@token_required
+def getAnsOfUser():
+    token = request.headers.get("Authorization").split(" ")[1]
+
+    try:
+
+        User = db.session.execute(
+            text("SELECT UserID FROM USERS WHERE SessionToken = :token"),
+            {"token": token},
+        ).fetchone()
+
+        query = "SELECT AnsID, content, upvotes, downvotes, createdAt, UserID, QuesID FROM ANSWERS WHERE UserID = :UserID ORDER BY createdAt DESC"
+
+        Answer = db.session.execute(
+            text(query),
+            {"UserID": User[0]},
+        ).fetchall()
+        columns = [
+            "AnsID",
+            "content",
+            "upvotes",
+            "downvotes",
+            "createdAt",
+            "UserID",
+            "QuesID",
+        ]
+
+        response = [dict(zip(columns, rows)) for rows in Answer]
+
+        return jsonify(response)
+    except Exception as e:
+        db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
 
