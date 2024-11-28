@@ -1,4 +1,3 @@
--- Active: 1731131296284@@127.0.0.1@1433@Project
 -- delete  database forcefully
 
 -- USE master;
@@ -12,13 +11,13 @@ GO
 IF NOT EXISTS (
     SELECT name
 FROM sys.databases
-WHERE name = N'Project'
+WHERE name = N'Project1'
 )
-CREATE DATABASE Project
+CREATE DATABASE Project1
 GO
 
 
-USE Project
+USE Project1
 GO
 
 IF NOT EXISTS (

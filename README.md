@@ -1,3 +1,5 @@
-1. pip install -r requirements.txt
+1. python -m venv venv
 2. source venv/bin/activate
-3. flask --app app.py --debug run 
+   - for windows: venv\Scripts\activate
+3. pip install -r requirements.txt
+4. flask --app app.py --debug run

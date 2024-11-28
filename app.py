@@ -10,12 +10,17 @@ import datetime
 from flask_cors import CORS
 
 
+# app.config["SQLALCHEMY_DATABASE_URI"] = (
+#     "mssql+pyodbc://SA:YourStrong!Passw0rd@localhost/Project?driver=ODBC+Driver+17+for+SQL+Server"
+# )
+
 app = Flask(__name__)
 CORS(app)
-
 app.config["SQLALCHEMY_DATABASE_URI"] = (
-    "mssql+pyodbc://SA:YourStrong!Passw0rd@localhost/Project?driver=ODBC+Driver+17+for+SQL+Server"
+    "mssql+pyodbc://CHAUDHRY\\SQLEXPRESS01/Project?"
+    "driver=SQL+Server&trusted_connection=yes"
 )
+
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
@@ -96,7 +101,7 @@ def register():
         if user is not None:
             return jsonify({"error": "User already registered. Sign in Instead"}), 400
 
-        # chnow = datetime.datetime.now()eck if email is unique
+        now = datetime.datetime.now()
         username = db.session.execute(
             text("Select * FROM USERS WHERE UserName = :uname"), {"uname": uname}
         ).fetchone()
